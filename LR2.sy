@@ -1,0 +1,28 @@
+/*
+s = v DOTDOT EQ E | l s
+v = I
+l = I DOTDOT
+*/
+
+/*
+S = A
+A = b B
+B = c C
+B = c C e
+C = d A
+A = a
+*/
+
+/*
+s = e
+e = e PLUS t | t
+t = t MUL p | p
+p = f EXP p | f
+f = OPAREN e CPAREN | ID
+*/
+
+e = t | e PLUS t 
+t = f MUL t | f
+f = ID
+f = t DI
+

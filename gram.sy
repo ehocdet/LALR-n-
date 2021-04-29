@@ -1,0 +1,344 @@
+
+/* TODO: 
+
+     preciser l'identifier de import 
+
+*/
+
+safeParser = MODULE module_id maybeexport SEPARATOR coreModule
+             | coreModule
+             | INTERFACE module_id SEPARATOR coreInterface
+
+
+maybeexport = | OPAREN export_list CPAREN
+export_list = export | export COMMA export_list
+
+coreModule = moreimports moreinfix  morebody
+coreInterface = moreimports moreinfix  morebodyInterface
+
+moreimports = | imports SEPARATOR moreimports
+moreinfix = | infix SEPARATOR moreinfix
+morebody = | body SEPARATOR morebody
+morebodyInterface = | bodyInterface SEPARATOR morebodyInterface
+
+
+export = identifier
+         | identifier DOTDOT
+         | identifier OPAREN type_id_list CPAREN
+
+
+
+type_id_list = type_id | type_id COMMA type_id_list
+
+imports = IMPORT QUALIFIED import_list
+        | IMPORT  import_list
+
+import_list = import | import COMMA import_list
+import = module_id maybeidentifier
+
+maybeidentifier = | OPAREN identifier_list CPAREN
+identifier_list = identifier | identifier COMMA identifier_list
+
+Symbol_list = Symbol | Symbol COMMA Symbol_list
+
+infix = fix prec Symbol_list
+fix = INFIXL 
+      | INFIXR
+      | INFIX
+
+prec = | integer
+
+
+body = typeDef 
+     | typeClassDef
+     | instanceClassDef
+     | functionTypeDef
+     | functionDef
+     | macroDef 
+
+
+bodyInterface = typeDef 
+                | abstractTypeDef
+                | typeClassDef
+                | typeInstanceClassDef
+                | functionTypeDef
+                | macroDef 
+
+
+
+typeDef = algebraicTypeDef
+          | recordTypeDef
+          | synonymTypeDef
+
+
+algebraicTypeDef = DCOLON typeLhs EQUAL constructors
+recordTypedef = DCOLON typeLhs EQUAL quantifiedVariables OCURLY field_list CCURLY
+              | DCOLON typeLhs EQUAL                     OCURLY field_list CCURLY
+field_list = field | field field_list
+field = field_id DCOLON type
+synonymTypeDef = DCOLON typeLhs COLONDEQUAL type
+abstractTypeDef = DCOLON typeLhs
+
+typeLhs = type_id variables 
+variables = | variable variables
+
+constructors = constructorDef PIPE constructors
+               | constructorDef
+
+constructorDef = maybequantifiedVariables  typeSymbol brackTypes
+               | maybequantifiedVariables brackType type_id brackType
+
+maybequantifiedVariables = | quantifiedVariables COLON
+quantifiedVariables = existvar | existvar quantifiedVariables 
+existvar = EXIST DOT variable
+uniqTypeAttrib = STAR
+                 | variable COLON
+                 | DOT
+                 |
+
+strict = BANG | 
+
+type = moreBrackTypes
+       | type RARROW moreBrackTypes
+
+brackTypes = | brackType brackTypes
+moreBrackTypes = brackType | brackType moreBrackTypes
+
+
+brackType = strict uniqTypeAttrib simpleType
+
+
+simpleType = typeConstructor
+             | variable
+             | basicType
+             | predefAbstrType
+             | listType
+             | tupleType
+             | arrayType
+             | arrowType
+             | OPAREN type CPAREN
+
+
+typeConstructor = type_id
+                  | OBRACK CBRACK
+                  | OPAREN commas CPAREN
+                  | OCURLY CCURLY
+                  | OPAREN RARROW CPAREN
+
+commas = COMMA       
+       | COMMA commas
+
+
+basicType = BOOL | CHAR | INT | LONG | REAL
+predefAbstrType = WORLD | FILE
+
+listType = OBRACK type CBRACK
+tupleType = OPAREN type COMMA typelist CPAREN
+typelist = type COMMA typelist | type
+
+arrayType = OCURLY type CCURLY
+arrowType = OPAREN type RARROW type CPAREN
+
+/*
+typeClassDef ::= CLASS classSymbol typeVariable [PIPE classContext] [classMembers]
+               | CLASS classSymbol typeVariable DCOLON functiontype
+
+classMembers ::= WHERE {classMemberDef SEPARATOR}+
+classMemberDef ::= functionTypeDef 
+                 | macroDef
+
+typeInstanceClassDef ::= INSTANCE classSymbol {typeInstance}-list
+instanceClassDef ::= INSTANCE classSymbol typeInstance [coreInstance]
+typeInstance ::= brackType [DEFAULT] [PIPE classContext]
+coreInstance ::= WHERE {localDef SEPARATOR}+
+
+classContext ::= {class_id}-list typeVariable 
+               | AND classContext
+
+
+
+functionTypeDef ::= {functionSymbol}-list DCOLON functionType
+functionType ::= type [PIPE classContext] [COMMA uniqTypeUnequalities]
+
+uniqTypeUnequalities ::= OBRACK {{uniqTypeVariable}-list INFEQUAL uniqTypeVariable}-list CBRACK
+
+functionDef ::= functionPattern {guard EQUAL functionBody}+ [localFunctionAltDef]
+
+functionBody ::= graphExpr [localFunctionDef]
+
+localFunctionDef ::= WITH {localDef SEPARATOR}+
+localFunctionAltdef ::= WHERE {localDef SEPARATOR}+
+
+localDef ::= functionTypeDef
+           | functionDef
+
+macroDef ::= functionPattern COLONDEQUAL graphExpr [localFunctionAltDef]
+
+
+
+/*
+
+functionPattern env ::= a:Symbol <<isFunctionSymbol env a>>?  {pattern}*
+                      | graphPattern FUNCTION_ID graphPattern
+ 
+graphPattern env    ::= a:Symbol <<isConstructorSymbol env a >>?  {pattern}*
+                      | graphPattern CONSTRUCTOR_ID graphPattern
+                      | pattern
+
+functionSymbol env  ::=  
+
+Symbol = identifier
+       | OPAREN identifier CPAREN
+       | BQUOTE identifier BQUOTE
+*/
+
+
+
+
+functionPattern ::= functionSymbol {pattern}*
+                  | graphPattern function_id graphPattern
+
+pattern ::= [variable EQUALCOLON] brackPattern
+brackPattern ::= constructor_id
+               | patternVariable
+               | basicValuePattern
+               | listConstructor
+               | listPattern
+               | recordPattern
+               | arrayPattern
+               | tuplePattern
+               | OPAREN graphPattern CPAREN
+
+graphPattern ::= constructorSymbol {pattern}*
+               | graphPattern constructor_id graphPattern
+               | pattern
+
+patternVariable ::= variable
+                  | ANONYMOUS
+
+basicValuePattern ::= basicValue
+
+listPattern ::= OBRACK {pattern}-list CBRACK
+              | OBRACK chars CBRACK
+
+listConstructor ::= COLON
+                  | OBRACK CBRACK
+
+tuplePattern ::= OPAREN pattern COMMA {pattern}-list CPAREN
+
+recordPattern ::= OCURLY {field_id [EQUAL pattern]}-list [DCOLON simpletype]
+
+arrayPattern ::= OCURLY {pattern}-list CCURLY
+               | OCURLY {arrayIndex EQUAL variable}-list CCURLY
+               | string
+
+
+valDef ::= graphPattern EQUAL graphExpr
+
+graphExpr ::= application
+            | caseExpr
+            | letExpr
+
+caseExpr ::= CASE graphExpr OF {caseDef SEPARATOR}+
+           | IF graphExpr THEN graphExpr ELSE graphExpr
+caseDef ::= pattern {guard RARROW functionBody}+ [localFunctionAltDef] 
+
+letExpr ::= lets {valDef SEPARATOR}+ IN graphExpr
+lets ::= LET 
+       | SLET
+
+guard ::= {letBefore}* filter
+letBefore ::= altLets {valDef SEPARATOR}+
+altLets ::= SHARP 
+          | SHARPBANG 
+          | Lets
+
+application ::= {brackExpr}+
+brackExpr ::= constructorSymbol
+            | variable
+            | listConstructor
+            | basicValue
+            | tuple
+            | list
+            | record
+            | recordSelection
+            | array
+            | arraySelection
+            | lambdaAbstration
+            | OPAREN graphExpr CPAREN
+
+tuple ::= OPAREN graphExpr COMMA {graphExpr}-list CPAREN
+
+list ::= OBRACK {graphExpr}-list CBRACK
+       | OBRACK graphExpr [COMMA graphExpr] DOTDOT [graphExpr] CBRACK
+       | OBRACK graphExpr DBACKSLASH {qualifier}-list CBRACK
+       | OBRACK chars CBRACK
+
+record ::= OCURLY [recordExpr AND] {field_id EQUAL graphExpr}-list CCURLY [DCOLON simpletype]
+recordSelection ::= recordExpr [DCOLON simpletype] DOT field_id
+
+array ::= OCURLY {graphExpr}-list CCURLY
+        | OCURLY arrayExpr AND {arrayIndex EQUAL graphExpr}-list [DBACKSLASH {qualifier}-list] CCURLY
+        | OCURLY [arrayExpr AND] graphExpr DBACKSLASH {qualifier}-list CCURLY
+        | string
+arrayIndex ::= OBRACK {integerExpr}-list CBRACK
+arraySelection ::= arrayExpr DOT arrayIndex
+
+qualifier ::= generator {AND generator}* filter
+generator ::= selector LARROW graphExpr
+selector ::= brackPattern
+filter ::= [PIPE booleanExpr]
+
+lambdaAbstration ::= LAMBDA {pattern}* RARROW graphExpr
+
+
+booleanExpr ::= graphExpr
+integerExpr ::= graphExpr
+recordExpr ::= graphExpr
+arrayIndex ::= graphExpr
+
+*/
+
+basicValue = boolean
+             | char
+             | integer
+             | real
+
+chars = CHARS_VAL
+        | CHAR_VAL
+
+string = STRING_VAL
+boolean = BOOLEAN_VAL
+char = CHAR_VAL
+integer = INTERGER_VAL
+real = REAL_VAL
+
+Symbol = identifier
+              | OPAREN identifier CPAREN
+
+
+
+identifier = lowerCaseId
+             | uperCaseId
+             | funnyId
+
+
+typeSymbol = type_id
+           | OPAREN type_id CPAREN
+
+type_id = uperCaseId
+          | funnyId
+
+constructor_id = type_id
+module_id = lowerCaseId
+            | uperCaseId
+
+field_id = lowerCaseId
+
+variable = lowerCaseId
+
+funnyId = FUNNYID
+uperCaseId = UPERCASEID
+lowerCaseId = LOWERCASEID
+
+

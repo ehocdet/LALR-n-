@@ -1,0 +1,12 @@
+
+s = e g
+
+e = t | e PLUS t
+
+t = p | t MUL p
+
+p = f | f EXP p
+
+f = ID | OPAREN e CPAREN
+
+ 
